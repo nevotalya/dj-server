@@ -19,7 +19,6 @@ const {
   KEY_ID,
   PRIVATE_KEY_P8,
   PRIVATE_KEY_P8_PATH,
-  PORT = 8080,
 } = process.env;
 
 if (!TEAM_ID || !KEY_ID) {
@@ -438,6 +437,7 @@ function sanitizeName(name) {
    Start server
    ========================= */
 const HOST = '0.0.0.0';                    // 👈 important for Render
+const PORT = process.env.PORT || 10000;
 server.listen(PORT, HOST, () => {
   console.log(`⚡ DJ server (WS + HTTP) listening on ${HOST}:${PORT}`);
   console.log(`   • WS endpoint: ws://localhost:${PORT}`);

@@ -440,7 +440,7 @@ const HOST = '0.0.0.0';                    // 👈 important for Render
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, HOST, () => {
   console.log(`⚡ DJ server (WS + HTTP) listening on ${HOST}:${PORT}`);
-  console.log(`   • WS endpoint: ws://localhost:${PORT}`);
-  console.log(`   • Dev token:   http://localhost:${PORT}/v1/developer-token`);
-  console.log(`   • Health:      http://localhost:${PORT}/health`);
+  console.log(`   • WS endpoint: wss://dj-server-a95a.onrender.com`);
+  console.log(`   • Dev token:   wss://dj-server-a95a.onrender.com/v1/developer-token`);
+  console.log(`   • Health:      wss://dj-server-a95a.onrender.com/health`);
 });

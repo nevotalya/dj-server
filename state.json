@@ -1,0 +1,303 @@
+{
+  "users": [
+    {
+      "id": "E6EF71A1-8A6E-4B22-83AB-AAD544449199",
+      "displayName": null,
+      "friends": []
+    },
+    {
+      "id": "925CC17D-CD9B-49FB-94DD-A7D9FB9C8ECB",
+      "displayName": null,
+      "friends": []
+    },
+    {
+      "id": "B61DF79F-AEDA-49E9-B3B0-9C0234DAADFB",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "947DA36B-8DCD-4007-B050-F33F8973F260",
+      "displayName": "Polly",
+      "friends": []
+    },
+    {
+      "id": "B887814F-7824-4D7B-B02A-43CBC403898D",
+      "displayName": null,
+      "friends": []
+    },
+    {
+      "id": "91E141E9-5FF5-411E-A958-3C6E5EFFC58B",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "1EB2FAB5-4F4B-48D2-A124-4B4FE371B86C",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "A3E82A31-97E1-422B-9286-6BE7526B6416",
+      "displayName": "Fffg",
+      "friends": []
+    },
+    {
+      "id": "292AF17F-FC5C-4260-B162-19B0CC842153",
+      "displayName": "Roy",
+      "friends": []
+    },
+    {
+      "id": "FAFB6E72-5733-43D1-BA2C-FA777D042A73",
+      "displayName": "Fffg",
+      "friends": []
+    },
+    {
+      "id": "C877D988-B7A6-4B99-9BA8-5907217DDF20",
+      "displayName": "Fffg",
+      "friends": []
+    },
+    {
+      "id": "975F7292-B861-4719-8B96-0298A8270C0E",
+      "displayName": "Roy",
+      "friends": []
+    },
+    {
+      "id": "31346DB3-15B2-4CE9-8018-B0155E7FAE29",
+      "displayName": "Roy",
+      "friends": [
+        "090CC6DC-86E3-4356-83E3-277CDE0D3043"
+      ]
+    },
+    {
+      "id": "090CC6DC-86E3-4356-83E3-277CDE0D3043",
+      "displayName": "Talya",
+      "friends": [
+        "31346DB3-15B2-4CE9-8018-B0155E7FAE29"
+      ]
+    },
+    {
+      "id": "1FCD5637-76CC-47B6-A70D-3A81F5357BD9",
+      "displayName": "Talya",
+      "friends": [
+        "188919A6-D675-42DD-BF80-AF6427660C28"
+      ]
+    },
+    {
+      "id": "188919A6-D675-42DD-BF80-AF6427660C28",
+      "displayName": "Roy",
+      "friends": [
+        "1FCD5637-76CC-47B6-A70D-3A81F5357BD9"
+      ]
+    },
+    {
+      "id": "EBE55E5F-FD26-444D-A5EA-F693845B168A",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "639014A6-B099-4FE8-9D02-45338E828AF5",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "F05C9DD4-9688-488E-9291-74F1E845A503",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "849028BB-0748-4B17-81EC-A8D4BE89A0FA",
+      "displayName": "Mac",
+      "friends": []
+    },
+    {
+      "id": "E4608F9C-A0E0-4591-9D5C-65E04F380BA4",
+      "displayName": "Talya",
+      "friends": [
+        "4F6607DF-2FDF-4728-9015-3E361BD0E7DC"
+      ]
+    },
+    {
+      "id": "4F6607DF-2FDF-4728-9015-3E361BD0E7DC",
+      "displayName": "Roy",
+      "friends": [
+        "E4608F9C-A0E0-4591-9D5C-65E04F380BA4"
+      ]
+    },
+    {
+      "id": "95E2FE54-358D-4FBE-8AC0-F7523DFC2A4E",
+      "displayName": "Roy",
+      "friends": []
+    },
+    {
+      "id": "8CF85603-7EE4-4C40-A77C-778C58A501A7",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "462299DA-CC21-477D-BD66-761776048132",
+      "displayName": "Talya",
+      "friends": [
+        "0C0DE4CD-88C2-4034-B7FB-614358A68EB3"
+      ]
+    },
+    {
+      "id": "0C0DE4CD-88C2-4034-B7FB-614358A68EB3",
+      "displayName": "Roy",
+      "friends": [
+        "462299DA-CC21-477D-BD66-761776048132"
+      ]
+    },
+    {
+      "id": "FFCF2C67-B4B2-45CF-91E8-1019DF13D97E",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "2D6A989A-5D36-4CA0-B1BF-A709A08B8E7E",
+      "displayName": "Talya",
+      "friends": [
+        "B60CDE23-FB48-41BC-B4E5-48E58A4F61E6"
+      ]
+    },
+    {
+      "id": "B60CDE23-FB48-41BC-B4E5-48E58A4F61E6",
+      "displayName": "Roy",
+      "friends": [
+        "2D6A989A-5D36-4CA0-B1BF-A709A08B8E7E"
+      ]
+    },
+    {
+      "id": "B95C6070-674B-4A8F-B876-209644136886",
+      "displayName": "Talya",
+      "friends": [
+        "E07E0B6F-10D6-48AF-BDDE-C9ECB41BC45E"
+      ]
+    },
+    {
+      "id": "E07E0B6F-10D6-48AF-BDDE-C9ECB41BC45E",
+      "displayName": "Roy",
+      "friends": [
+        "B95C6070-674B-4A8F-B876-209644136886"
+      ]
+    },
+    {
+      "id": "E3DB13C0-7CB0-42F2-8DB4-E43D5DBD6913",
+      "displayName": "Talya",
+      "friends": [
+        "06086DAC-30FD-4D07-86A6-B4D5EE045E6B"
+      ]
+    },
+    {
+      "id": "06086DAC-30FD-4D07-86A6-B4D5EE045E6B",
+      "displayName": "Roy",
+      "friends": [
+        "E3DB13C0-7CB0-42F2-8DB4-E43D5DBD6913"
+      ]
+    },
+    {
+      "id": "74F4B999-DA84-4FBC-BE6B-9AF88475CC7A",
+      "displayName": "Talya",
+      "friends": [
+        "BB8D5038-D52E-4C59-82DD-09A8102F887D"
+      ]
+    },
+    {
+      "id": "BB8D5038-D52E-4C59-82DD-09A8102F887D",
+      "displayName": "Roy",
+      "friends": [
+        "74F4B999-DA84-4FBC-BE6B-9AF88475CC7A"
+      ]
+    },
+    {
+      "id": "3BF91E00-DFDB-4597-9E0C-B8149F24664F",
+      "displayName": "Talya",
+      "friends": [
+        "BBEACC90-3453-414D-A5A4-A387F4F48244"
+      ]
+    },
+    {
+      "id": "BBEACC90-3453-414D-A5A4-A387F4F48244",
+      "displayName": "Roy",
+      "friends": [
+        "3BF91E00-DFDB-4597-9E0C-B8149F24664F"
+      ]
+    },
+    {
+      "id": "63C74E03-8B18-4843-ABB8-01CE3812B930",
+      "displayName": "Roy",
+      "friends": []
+    },
+    {
+      "id": "EF3E2CA2-DDC6-4DA6-AE51-EDC3BAE0CF23",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "20487B4D-4794-4E54-889F-CD93A5F6A23A",
+      "displayName": "Talya",
+      "friends": [
+        "0D7014B2-90A9-4B46-A7B1-E779EFD3ED03"
+      ]
+    },
+    {
+      "id": "0D7014B2-90A9-4B46-A7B1-E779EFD3ED03",
+      "displayName": "Roy",
+      "friends": [
+        "20487B4D-4794-4E54-889F-CD93A5F6A23A"
+      ]
+    },
+    {
+      "id": "FCB99FC9-6425-44A3-B352-7788E455B5F1",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "user_E08EB052274D4403A0CB037EF92E1240",
+      "displayName": "Talya",
+      "friends": [
+        "user_F89BDF5E5E8E4C559D265B0960E056EF"
+      ]
+    },
+    {
+      "id": "user_F89BDF5E5E8E4C559D265B0960E056EF",
+      "displayName": "Roy",
+      "friends": [
+        "user_E08EB052274D4403A0CB037EF92E1240"
+      ]
+    },
+    {
+      "id": "user_55B8B480E75D4DB2ADE2101DC7BD0ADF",
+      "displayName": "Talya",
+      "friends": []
+    },
+    {
+      "id": "user_17F96D53BC45429390B4AC3B7E3C2AE3",
+      "displayName": "Talya",
+      "friends": [
+        "user_6C7F7E57EE63456AA99A363215FA6ED0",
+        "user_8F30B1982C90498A9A50B441EAF9DBFA",
+        "user_43BEA433ADC54C3DBEF3AB3ADD28A681"
+      ]
+    },
+    {
+      "id": "user_6C7F7E57EE63456AA99A363215FA6ED0",
+      "displayName": "Roy",
+      "friends": [
+        "user_17F96D53BC45429390B4AC3B7E3C2AE3"
+      ]
+    },
+    {
+      "id": "user_8F30B1982C90498A9A50B441EAF9DBFA",
+      "displayName": "Eli",
+      "friends": [
+        "user_17F96D53BC45429390B4AC3B7E3C2AE3"
+      ]
+    },
+    {
+      "id": "user_43BEA433ADC54C3DBEF3AB3ADD28A681",
+      "displayName": "Eli",
+      "friends": [
+        "user_17F96D53BC45429390B4AC3B7E3C2AE3"
+      ]
+    }
+  ]
+}

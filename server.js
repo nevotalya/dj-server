@@ -434,8 +434,12 @@ function sanitizeName(name) {
 /* =========================
    Start server
    ========================= */
-server.listen(PORT, () => {
-  console.log(`⚡ DJ server (WS + HTTP) listening on :${PORT}`);
+/* =========================
+   Start server
+   ========================= */
+const HOST = '0.0.0.0';                    // 👈 important for Render
+server.listen(PORT, HOST, () => {
+  console.log(`⚡ DJ server (WS + HTTP) listening on ${HOST}:${PORT}`);
   console.log(`   • WS endpoint: ws://localhost:${PORT}`);
   console.log(`   • Dev token:   http://localhost:${PORT}/v1/developer-token`);
   console.log(`   • Health:      http://localhost:${PORT}/health`);

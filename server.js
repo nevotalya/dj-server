@@ -125,23 +125,48 @@ function pushFriendsList(userId) {
 }
 
 function forwardPlaybackFrom(djUserId, update) {
+  // Prefer the DJ-provided global stamp (seconds).
+  // If a legacy 'timestamp' exists, normalize it to seconds (it might be ms).
+  let serverTimestamp;
+  if (typeof update.serverTimestamp === 'number') {
+    serverTimestamp = update.serverTimestamp;               // already seconds (DJ stamped via NTP/offset)
+  } else if (typeof update.timestamp === 'number') {
+    serverTimestamp = update.timestamp > 1e12
+      ? update.timestamp / 1000                             // normalize ms → s
+      : update.timestamp;                                   // already seconds
+  } else {
+    serverTimestamp = undefined;                            // no stamp; listeners will fall back gracefully
+    // If you want a fallback (less accurate, adds DJ→server latency), uncomment:
+    // serverTimestamp = Date.now() / 1000;
+  }
+
   const payload = {
     djId: djUserId,
     position: Number(update.position) || 0,
     isPlaying: !!update.isPlaying,
-    timestamp: update.timestamp || Date.now(),
-    songPID: update.songPID ?? undefined,
-    playlistPID: update.playlistPID ?? undefined,
-    catalogSongId: update.catalogSongId ?? undefined,
-    title: update.title ?? undefined,
-    artist: update.artist ?? undefined,
+
+    // ✅ New: send 'serverTimestamp' (seconds). Do NOT auto-generate legacy 'timestamp'.
+    serverTimestamp,
+
+    // pass-through (keep undefined fields out of JSON)
+    songPID:          update.songPID ?? undefined,
+    playlistPID:      update.playlistPID ?? undefined,
+    catalogSongId:    update.catalogSongId ?? undefined,
+    title:            update.title ?? undefined,
+    artist:           update.artist ?? undefined,
+
+    // (optional) if you must keep legacy 'timestamp' for old clients, you can mirror seconds here:
+    // timestamp: serverTimestamp
   };
+
   const msg = JSON.stringify({ type: 'playback', payload });
 
   for (const [ws] of sockets.entries()) {
     if (ws.readyState !== WebSocket.OPEN) continue;
     const meta = ws.meta || {};
-    if (meta.following === djUserId) { try { ws.send(msg); } catch {} }
+    if (meta.following === djUserId) {
+      try { ws.send(msg); } catch {}
+    }
   }
 }
 

@@ -127,18 +127,18 @@ function pushFriendsList(userId) {
 function forwardPlaybackFrom(djUserId, update) {
   // Prefer the DJ-provided global stamp (seconds).
   // If a legacy 'timestamp' exists, normalize it to seconds (it might be ms).
-  let serverTimestamp;
-  if (typeof update.serverTimestamp === 'number') {
-    serverTimestamp = update.serverTimestamp;               // already seconds (DJ stamped via NTP/offset)
-  } else if (typeof update.timestamp === 'number') {
-    serverTimestamp = update.timestamp > 1e12
-      ? update.timestamp / 1000                             // normalize ms → s
-      : update.timestamp;                                   // already seconds
-  } else {
-    serverTimestamp = undefined;                            // no stamp; listeners will fall back gracefully
-    // If you want a fallback (less accurate, adds DJ→server latency), uncomment:
-    // serverTimestamp = Date.now() / 1000;
-  }
+//  let serverTimestamp;
+//  if (typeof update.serverTimestamp === 'number') {
+//    serverTimestamp = update.serverTimestamp;               // already seconds (DJ stamped via NTP/offset)
+//  } else if (typeof update.timestamp === 'number') {
+//    serverTimestamp = update.timestamp > 1e12
+//      ? update.timestamp / 1000                             // normalize ms → s
+//      : update.timestamp;                                   // already seconds
+//  } else {
+//    serverTimestamp = undefined;                            // no stamp; listeners will fall back gracefully
+//    // If you want a fallback (less accurate, adds DJ→server latency), uncomment:
+//    // serverTimestamp = Date.now() / 1000;
+//  }
 
   const payload = {
     djId: djUserId,
@@ -146,7 +146,9 @@ function forwardPlaybackFrom(djUserId, update) {
     isPlaying: !!update.isPlaying,
 
     // ✅ New: send 'serverTimestamp' (seconds). Do NOT auto-generate legacy 'timestamp'.
-    serverTimestamp,
+    //serverTimestamp,
+    serverTimestamp: update.serverTimestamp,
+
 
     // pass-through (keep undefined fields out of JSON)
     songPID:          update.songPID ?? undefined,
@@ -159,6 +161,7 @@ function forwardPlaybackFrom(djUserId, update) {
     // timestamp: serverTimestamp
   };
 
+    console.log('DJ server serverTimestamp', update.serverTimestamp);
   const msg = JSON.stringify({ type: 'playback', payload });
 
   for (const [ws] of sockets.entries()) {

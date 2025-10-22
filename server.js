@@ -145,6 +145,7 @@ function forwardPlaybackFrom(djUserId, update) {
     position: Number(update.position) || 0,
     isPlaying: !!update.isPlaying,
 
+    songStartAtGlobal: update.songStartAtGlobal,
     // ✅ New: send 'serverTimestamp' (seconds). Do NOT auto-generate legacy 'timestamp'.
     //serverTimestamp,
     serverTimestamp: update.serverTimestamp,
@@ -161,7 +162,7 @@ function forwardPlaybackFrom(djUserId, update) {
     // timestamp: serverTimestamp
   };
 
-    console.log('DJ server serverTimestamp', update.serverTimestamp);
+  //console.log('DJ server serverTimestamp', update.serverTimestamp);
   const msg = JSON.stringify({ type: 'playback', payload });
 
   for (const [ws] of sockets.entries()) {

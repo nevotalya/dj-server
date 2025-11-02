@@ -365,6 +365,7 @@ wss.on('connection', (ws) => {
       }
 
       case 'addFriend': {
+        console.log(`addFriend 0`);
         const uid = sockets.get(ws);
         if (!uid) return;
         const fid = payload && payload.friendId;

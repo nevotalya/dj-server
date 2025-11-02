@@ -368,7 +368,12 @@ wss.on('connection', (ws) => {
         const uid = sockets.get(ws);
         if (!uid) return;
         const fid = payload && payload.friendId;
+          
+          
+        console.log(`addFriend 1`, uid, fid);
         if (!fid || uid === fid) return;
+
+        console.log(`addFriend 2`, uid, fid);
 
         const me = ensureUser(uid);
         const them = ensureUser(fid);

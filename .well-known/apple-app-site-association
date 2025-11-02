@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appID": "663434PW8L.talya.DJ",
+        "paths": [ "/invite/*" ]
+      }
+    ]
+  }
+}

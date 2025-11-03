@@ -21,6 +21,11 @@ const {
   PRIVATE_KEY_P8_PATH,
 } = process.env;
 
+// Bundle ID for Universal Links
+const BUNDLE_ID = process.env.BUNDLE_ID || 'talya.DJ';
+// Optional App Store fallback URL for invite page
+const APP_STORE_URL = process.env.APP_STORE_URL || 'https://apps.apple.com/app/idYOUR_APP_ID';
+
 if (!TEAM_ID || !KEY_ID) {
   console.warn('⚠️ TEAM_ID / KEY_ID missing — /v1/developer-token will fail until set.');
 }
@@ -34,20 +39,15 @@ function loadState() {
   try {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
     const parsed = JSON.parse(raw);
-
     const users = new Map(
       (parsed.users || []).map(u => [
         u.id,
         { id: u.id, displayName: u.displayName || null, friends: new Set(u.friends || []) },
       ])
     );
-
-    // NEW: restore DJs across restarts
-    const djs = new Set(parsed.currentDJs || []);
-
-    return { users, currentDJs: djs };
+    return { users };
   } catch {
-    return { users: new Map(), currentDJs: new Set() };
+    return { users: new Map() };
   }
 }
 
@@ -59,24 +59,17 @@ function saveNow() {
     displayName: u.displayName,
     friends: Array.from(u.friends || []),
   }));
-  const djsArr = Array.from(currentDJs);
-  try {
-    fs.writeFileSync(
-      STATE_FILE,
-      JSON.stringify({ users: usersArr, currentDJs: djsArr }, null, 2),
-      'utf8'
-    );
-  } catch (e) {
-    console.error('Persist error:', e);
-  }
+  try { fs.writeFileSync(STATE_FILE, JSON.stringify({ users: usersArr }, null, 2), 'utf8'); }
+  catch (e) { console.error('Persist error:', e); }
 }
 
 /* =========================
    Runtime state
    ========================= */
-const { users, currentDJs } = loadState();
+const { users } = loadState();
 const sockets = new Map();        // ws -> userId
 const socketsByUser = new Map();  // userId -> Set<ws>
+const currentDJs = new Set();     // Set<userId>
 
 /* =========================
    Helpers
@@ -100,18 +93,17 @@ function broadcastAll(obj) {
   }
 }
 
-// Compute “users” payload. “following” is tracked per-socket. We compress to userId->followed.
 function usersListArray() {
+  // following is tracked per-socket; compress to userId -> followedDjId|null
   const followingMap = new Map();
   for (const [ws, uid] of sockets.entries()) {
     const meta = ws.meta || {};
-    // last writer wins; good enough to show a single follow per user
     followingMap.set(uid, meta.following || null);
   }
 
   return Array.from(users.values()).map(u => {
     const set = socketsByUser.get(u.id);
-    const online = !!(set && set.size > 0);
+    const online = !!(set && set.size > 0);  // presence
     return {
       id: u.id,
       displayName: u.displayName || "(unnamed)",
@@ -137,19 +129,14 @@ function pushFriendsList(userId) {
   }
 }
 
-// Forward DJ playback to listeners following this DJ.
-// We trust the DJ-provided 'serverTimestamp' (seconds) and 'songStartAtGlobal' (seconds).
 function forwardPlaybackFrom(djUserId, update) {
   const payload = {
     djId: djUserId,
     position: Number(update.position) || 0,
     isPlaying: !!update.isPlaying,
+    songStartAtGlobal: update.songStartAtGlobal,
+    serverTimestamp: update.serverTimestamp,
 
-    // Prefer the DJ's precise clock stamps
-    songStartAtGlobal: (typeof update.songStartAtGlobal === 'number') ? update.songStartAtGlobal : undefined,
-    serverTimestamp:   (typeof update.serverTimestamp   === 'number') ? update.serverTimestamp   : undefined,
-
-    // pass-through (keep undefined fields out of JSON)
     songPID:          update.songPID ?? undefined,
     playlistPID:      update.playlistPID ?? undefined,
     catalogSongId:    update.catalogSongId ?? undefined,
@@ -158,6 +145,7 @@ function forwardPlaybackFrom(djUserId, update) {
   };
 
   const msg = JSON.stringify({ type: 'playback', payload });
+
   for (const [ws] of sockets.entries()) {
     if (ws.readyState !== WebSocket.OPEN) continue;
     const meta = ws.meta || {};
@@ -172,7 +160,7 @@ function forwardPlaybackFrom(djUserId, update) {
    ========================= */
 const app = express();
 
-// Health
+// ---------- Health ----------
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -182,30 +170,20 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// MusicKit developer token (with robust PEM debug)
+// ---------- MusicKit developer token ----------
 async function createDeveloperToken() {
   if (!TEAM_ID || !KEY_ID) throw new Error('TEAM_ID or KEY_ID missing');
 
-  // Load PEM from file path or env
+  // Load PEM
   let pem;
   if (PRIVATE_KEY_P8_PATH) {
-    try {
-      pem = fs.readFileSync(PRIVATE_KEY_P8_PATH, 'utf8');
-    } catch (e) {
-      throw new Error(`Failed to read PRIVATE_KEY_P8_PATH: ${e.message}`);
-    }
+    pem = fs.readFileSync(PRIVATE_KEY_P8_PATH, 'utf8');
   } else if (PRIVATE_KEY_P8) {
     pem = PRIVATE_KEY_P8.includes('\\n') ? PRIVATE_KEY_P8.replace(/\\n/g, '\n') : PRIVATE_KEY_P8;
   } else {
     throw new Error('No PRIVATE_KEY_P8 or PRIVATE_KEY_P8_PATH provided');
   }
-
-  // Normalize PEM
-  pem = pem.replace(/\r\n/g, '\n');
-  if (pem.charCodeAt(0) === 0xFEFF) pem = pem.slice(1); // strip BOM
-  pem = pem.trimEnd();
-  if (pem.endsWith('%')) pem = pem.slice(0, -1);
-  pem = pem.trim() + '\n';
+  pem = pem.replace(/\r\n/g, '\n').trim() + '\n';
 
   const first = pem.split('\n')[0];
   const last  = pem.trim().split('\n').slice(-1)[0];
@@ -213,9 +191,9 @@ async function createDeveloperToken() {
     throw new Error('PEM missing BEGIN/END PRIVATE KEY markers');
   }
 
-  // Sign ES256 JWT
   const now = Math.floor(Date.now() / 1000);
   const exp = now + 60 * 60 * 12; // 12 hours
+
   const privateKey = await importPKCS8(pem, 'ES256');
 
   const jwt = await new SignJWT({})
@@ -237,6 +215,77 @@ app.get('/v1/developer-token', async (_req, res) => {
     console.error('Token error:', e);
     res.status(500).json({ error: 'token_failed' });
   }
+});
+
+/* =========================
+   Universal Links (AASA) + Invite page
+   ========================= */
+
+// --- AASA JSON (must be served with application/json, no redirect, no .json) ---
+const aasa = {
+  applinks: {
+    apps: [],
+    details: [
+      {
+        appIDs: [`${TEAM_ID}.${BUNDLE_ID}`],
+        // Tighten these paths later if you’d like
+        paths: [
+          "/invite/*",
+          "/friend/*",
+          "/addfriend/*",
+          "/.well-known/*",
+          "*"
+        ]
+      }
+    ]
+  }
+};
+
+// Serve from both well-known and root
+app.get(['/.well-known/apple-app-site-association', '/apple-app-site-association'], (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).send(aasa);
+});
+
+// --- Invite landing page: https://<host>/invite/:id?name=... ---
+app.get('/invite/:id', (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const name = String(req.query.name || '').trim();
+  const encodedName = encodeURIComponent(name);
+
+  // Your custom URL scheme to open the app directly
+  const deepLink = `dj://addfriend?id=${encodeURIComponent(id)}${name ? `&name=${encodedName}` : ''}`;
+
+  // Simple HTML: try to open the app; if not installed, show a button to App Store
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DJ — Invite</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; padding: 2rem; line-height: 1.4; }
+    .box { max-width: 540px; margin: 0 auto; }
+    a.btn { display: inline-block; padding: 12px 18px; border-radius: 10px; text-decoration: none; background: #007aff; color: #fff; }
+    .muted { color: #666; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Join your friend on DJ</h1>
+    <p class="muted">${name ? (`${name} invited you.`) : 'Open in the DJ app.'}</p>
+    <p><a class="btn" href="${deepLink}">Open in App</a></p>
+    <p class="muted">Don’t have the app? <a href="${APP_STORE_URL}">Get it on the App Store</a>.</p>
+  </div>
+  <script>
+    // Attempt auto-open
+    window.location.replace(${JSON.stringify(deepLink)});
+    // (Optional) If you want to auto-fallback after N ms, uncomment below:
+    // setTimeout(function(){ window.location.href = ${JSON.stringify(APP_STORE_URL)}; }, 2000);
+  </script>
+</body>
+</html>`);
 });
 
 /* =========================
@@ -268,7 +317,6 @@ wss.on('connection', (ws) => {
 
         const u = ensureUser(id);
 
-        // Require a name at least once
         if (!u.displayName && (!displayName || !String(displayName).trim())) {
           safeSend(ws, { type: 'requireName', payload: { reason: 'displayNameRequired' } });
           return;
@@ -311,18 +359,15 @@ wss.on('connection', (ws) => {
           return;
         }
         const on = !!(payload && payload.on);
-        if (on) {
-          currentDJs.add(uid);
-        } else {
+        if (on) currentDJs.add(uid);
+        else {
           if (currentDJs.has(uid)) {
             currentDJs.delete(uid);
-            // clear followers who were following this DJ
             for (const [ws2] of sockets.entries()) {
               if (ws2.meta && ws2.meta.following === uid) ws2.meta.following = null;
             }
           }
         }
-        saveSoon();
         pushUsersList();
         break;
       }
@@ -337,8 +382,7 @@ wss.on('connection', (ws) => {
         }
         const djId = payload && payload.djId;
         if (!djId) return;
-        if (djId === uid) return;             // no self-follow
-        if (!currentDJs.has(djId)) return;    // must be actively DJing now
+        if (!currentDJs.has(djId)) return;
         ws.meta.following = djId;
         pushUsersList();
         break;
@@ -385,7 +429,7 @@ wss.on('connection', (ws) => {
       case 'playback': {
         const uid = sockets.get(ws);
         if (!uid) return;
-        if (!currentDJs.has(uid)) return; // only DJs can broadcast playback
+        if (!currentDJs.has(uid)) return;
         forwardPlaybackFrom(uid, payload || {});
         break;
       }
@@ -411,13 +455,11 @@ wss.on('connection', (ws) => {
         set.delete(ws);
         if (set.size === 0) socketsByUser.delete(uid);
       }
-      // If the user has no more sockets, drop DJ state and clear followers
       if (socketsByUser.get(uid) == null && currentDJs.has(uid)) {
         currentDJs.delete(uid);
         for (const [ws2] of sockets.entries()) {
           if (ws2.meta && ws2.meta.following === uid) ws2.meta.following = null;
         }
-        saveSoon();
       }
       pushUsersList();
     }
@@ -433,7 +475,7 @@ const HEARTBEAT_MS = 30000;
 setInterval(() => {
   wss.clients.forEach((ws) => {
     if (ws.isAlive === false) { try { ws.terminate(); } catch {} return; }
-    ws.isAlive = true;
+    ws.isAlive = false;
     try { ws.ping(); } catch {}
   });
 }, HEARTBEAT_MS);
@@ -452,11 +494,12 @@ function sanitizeName(name) {
 /* =========================
    Start server
    ========================= */
-const HOST = '0.0.0.0';                    // important for Render
+const HOST = '0.0.0.0';                    // required for Render
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, HOST, () => {
   console.log(`⚡ DJ server (WS + HTTP) listening on ${HOST}:${PORT}`);
-  console.log(`   • WS endpoint: wss://dj-server-a95a.onrender.com/`);
+  console.log(`   • WS endpoint: wss://dj-server-a95a.onrender.com`);
   console.log(`   • Dev token:   https://dj-server-a95a.onrender.com/v1/developer-token`);
   console.log(`   • Health:      https://dj-server-a95a.onrender.com/health`);
+  console.log(`   • AASA:        https://dj-server-a95a.onrender.com/.well-known/apple-app-site-association`);
 });

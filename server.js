@@ -160,32 +160,27 @@ function forwardPlaybackFrom(djUserId, update) {
    ========================= */
 const app = express();
 
+/* ---------- AASA static (files) ---------- */
 const AASA_DIR = path.join(__dirname, '.well-known');
-
-// Serve /.well-known/apple-app-site-association (no file extension)
 app.use(
   '/.well-known',
   express.static(AASA_DIR, {
     setHeaders: (res, filePath) => {
-      // Make sure iOS sees the correct content-type
       if (filePath.endsWith('apple-app-site-association')) {
         res.setHeader('Content-Type', 'application/json');
-        // While testing, disable caches so you see changes immediately
         res.setHeader('Cache-Control', 'no-store');
       }
     }
   })
 );
-
-// Some iOS versions also try /apple-app-site-association at the root.
-// Serve the same file here as a fallback.
+// Root fallback for some iOS versions
 app.get('/apple-app-site-association', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(AASA_DIR, 'apple-app-site-association'));
 });
 
-// ---------- Health ----------
+/* ---------- Health ---------- */
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
@@ -195,7 +190,7 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// ---------- MusicKit developer token ----------
+/* ---------- MusicKit developer token ---------- */
 async function createDeveloperToken() {
   if (!TEAM_ID || !KEY_ID) throw new Error('TEAM_ID or KEY_ID missing');
 
@@ -243,75 +238,96 @@ app.get('/v1/developer-token', async (_req, res) => {
 });
 
 /* =========================
-   Universal Links (AASA) + Invite page
+   Universal Links (AASA JSON) + Invite fallback pages
    ========================= */
 
-// --- AASA JSON (must be served with application/json, no redirect, no .json) ---
+// --- AASA JSON served dynamically as well (covers /invite and /invite/*) ---
 const aasa = {
   applinks: {
     apps: [],
     details: [
       {
         appIDs: [`${TEAM_ID}.${BUNDLE_ID}`],
-        // Tighten these paths later if you’d like
         paths: [
-          "/invite/*",
-          "/friend/*",
-          "/addfriend/*",
-          "/.well-known/*",
-          "*"
+          "/invite",        // <— exact path (query form)
+          "/invite/*",      // <— path param form
+          "/friend", "/friend/*",
+          "/addfriend", "/addfriend/*"
         ]
       }
     ]
   }
 };
 
-// Serve from both well-known and root
+// Serve JSON from both places (ok to have both static + dynamic; dynamic wins)
 app.get(['/.well-known/apple-app-site-association', '/apple-app-site-association'], (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.status(200).send(aasa);
 });
 
-// --- Invite landing page: https://<host>/invite/:id?name=... ---
-app.get('/invite/:id', (req, res) => {
-  const id = String(req.params.id || '').trim();
-  const name = String(req.query.name || '').trim();
-  const encodedName = encodeURIComponent(name);
+// Helper: render fallback invite HTML
+function renderInviteHTML({ id, name, currentUrl }) {
+  const displayName = name || 'A friend';
+  // Prefer opening via the same universal link (best for iOS); also show custom scheme
+  const deepLinkScheme = `dj://addfriend?id=${encodeURIComponent(id)}${name ? `&name=${encodeURIComponent(name)}` : ''}`;
 
-  // Your custom URL scheme to open the app directly
-  const deepLink = `dj://addfriend?id=${encodeURIComponent(id)}${name ? `&name=${encodedName}` : ''}`;
-
-  // Simple HTML: try to open the app; if not installed, show a button to App Store
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.status(200).send(`<!doctype html>
+  return `<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>DJ — Invite</title>
   <style>
-    body { font-family: -apple-system, system-ui, sans-serif; padding: 2rem; line-height: 1.4; }
-    .box { max-width: 540px; margin: 0 auto; }
-    a.btn { display: inline-block; padding: 12px 18px; border-radius: 10px; text-decoration: none; background: #007aff; color: #fff; }
-    .muted { color: #666; font-size: 0.95rem; }
+    body { font-family: -apple-system, system-ui, Helvetica, Arial, sans-serif; padding: 24px; line-height: 1.45; }
+    .card { max-width: 560px; margin: 0 auto; border: 1px solid #eee; border-radius: 12px; padding: 20px; }
+    .btn { display: inline-block; padding: 12px 16px; border-radius: 10px; text-decoration: none; }
+    .primary { background: #0a84ff; color: #fff; }
+    .ghost { border: 1px solid #ccc; color: #333; margin-left: 8px; }
+    .muted { color: #666; font-size: 14px; }
   </style>
 </head>
 <body>
-  <div class="box">
+  <div class="card">
     <h1>Join your friend on DJ</h1>
-    <p class="muted">${name ? (`${name} invited you.`) : 'Open in the DJ app.'}</p>
-    <p><a class="btn" href="${deepLink}">Open in App</a></p>
-    <p class="muted">Don’t have the app? <a href="${APP_STORE_URL}">Get it on the App Store</a>.</p>
+    <p><strong>${displayName}</strong> invited you to connect.</p>
+    <p>
+      <!-- Universal Link to this very page (opens app if installed) -->
+      <a class="btn primary" href="${currentUrl}">Open in the DJ App</a>
+      <a class="btn ghost" href="${APP_STORE_URL}">Get the App</a>
+    </p>
+    <p class="muted">If nothing happens, tap <em>Get the App</em> to install first.</p>
   </div>
   <script>
-    // Attempt auto-open
-    window.location.replace(${JSON.stringify(deepLink)});
-    // (Optional) If you want to auto-fallback after N ms, uncomment below:
-    // setTimeout(function(){ window.location.href = ${JSON.stringify(APP_STORE_URL)}; }, 2000);
+    // Try custom scheme too—harmless if not installed
+    (function(){
+      var scheme = ${JSON.stringify(deepLinkScheme)};
+      try { window.location = scheme; } catch (e) {}
+    })();
   </script>
 </body>
-</html>`);
-});
+</html>`;
+}
+
+// Accept BOTH forms:
+//   • /invite/:id?name=Talya
+//   • /invite?id=...&name=...
+// Plus legacy aliases /friend and /addfriend
+function getIdAndName(req) {
+  const id = String((req.params.id ?? req.query.id ?? '')).trim().slice(0, 128);
+  const name = String(req.query.name ?? '').trim().slice(0, 128);
+  return { id, name };
+}
+
+function inviteHandler(req, res) {
+  const { id, name } = getIdAndName(req);
+  // Compose the current URL (stays a universal link)
+  const url = new URL(req.originalUrl, `${req.protocol}://${req.get('host')}`);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(renderInviteHTML({ id, name, currentUrl: url.toString() }));
+}
+
+app.get(['/invite', '/friend', '/addfriend'], inviteHandler);
+app.get(['/invite/:id', '/friend/:id', '/addfriend/:id'], inviteHandler);
 
 /* =========================
    HTTP + WebSocket

@@ -160,6 +160,31 @@ function forwardPlaybackFrom(djUserId, update) {
    ========================= */
 const app = express();
 
+const AASA_DIR = path.join(__dirname, '.well-known');
+
+// Serve /.well-known/apple-app-site-association (no file extension)
+app.use(
+  '/.well-known',
+  express.static(AASA_DIR, {
+    setHeaders: (res, filePath) => {
+      // Make sure iOS sees the correct content-type
+      if (filePath.endsWith('apple-app-site-association')) {
+        res.setHeader('Content-Type', 'application/json');
+        // While testing, disable caches so you see changes immediately
+        res.setHeader('Cache-Control', 'no-store');
+      }
+    }
+  })
+);
+
+// Some iOS versions also try /apple-app-site-association at the root.
+// Serve the same file here as a fallback.
+app.get('/apple-app-site-association', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(AASA_DIR, 'apple-app-site-association'));
+});
+
 // ---------- Health ----------
 app.get('/health', (_req, res) => {
   res.json({

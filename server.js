@@ -487,25 +487,53 @@ wss.on('connection', (ws) => {
     }
   });
 
-  ws.on('close', () => {
-    const uid = sockets.get(ws);
-    sockets.delete(ws);
-    if (uid) {
+//  ws.on('close', () => {
+//    const uid = sockets.get(ws);
+//    sockets.delete(ws);
+//    if (uid) {
+//      const set = socketsByUser.get(uid);
+//      if (set) {
+//        set.delete(ws);
+//        if (set.size === 0) socketsByUser.delete(uid);
+//      }
+//      if (socketsByUser.get(uid) == null && currentDJs.has(uid)) {
+//        currentDJs.delete(uid);
+//        for (const [ws2] of sockets.entries()) {
+//          if (ws2.meta && ws2.meta.following === uid) ws2.meta.following = null;
+//        }
+//      }
+//      pushUsersList();
+//    }
+//  });
+
+    ws.on('close', () => {
+      const uid = sockets.get(ws);
+      sockets.delete(ws);
+
+      if (!uid) return;
+
       const set = socketsByUser.get(uid);
       if (set) {
         set.delete(ws);
-        if (set.size === 0) socketsByUser.delete(uid);
-      }
-      if (socketsByUser.get(uid) == null && currentDJs.has(uid)) {
-        currentDJs.delete(uid);
-        for (const [ws2] of sockets.entries()) {
-          if (ws2.meta && ws2.meta.following === uid) ws2.meta.following = null;
+        if (set.size === 0) {
+          // no more active sockets for this user
+          socketsByUser.delete(uid);
         }
       }
-      pushUsersList();
-    }
-  });
 
+      // IMPORTANT:
+      // - Do NOT remove them from currentDJs here.
+      // - Do NOT clear followers’ meta.following here.
+      //
+      // Being a DJ / stopping being a DJ is controlled *only* by the explicit
+      // "setDJ" message, not by transient disconnections.
+      //
+      // Listeners will keep "following" the DJ ID in memory even if the DJ
+      // temporarily drops offline, and will automatically resume when DJ reconnects.
+
+      pushUsersList();
+    });
+    
   ws.on('error', (err) => { console.error('WS error:', err); });
 });
 

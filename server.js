@@ -160,6 +160,12 @@ function forwardPlaybackFrom(djUserId, update) {
    ========================= */
 const app = express();
 
+
+// Serve static files (e.g. privacy policy)
+const STATIC_DIR = path.join(__dirname, 'public');
+app.use(express.static(STATIC_DIR));
+
+
 /* ---------- AASA static (files) ---------- */
 const AASA_DIR = path.join(__dirname, '.well-known');
 app.use(
@@ -572,3 +578,5 @@ server.listen(PORT, HOST, () => {
   console.log(`   • Health:      https://dj-server-a95a.onrender.com/health`);
   console.log(`   • AASA:        https://dj-server-a95a.onrender.com/.well-known/apple-app-site-association`);
 });
+
+

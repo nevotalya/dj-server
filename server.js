@@ -111,7 +111,7 @@ function usersListArrayFor(viewerId) {
   const friendSet = viewer?.friends || new Set();
 
   return Array.from(users.values())
-    .filter(u => u.id === viewerId || friendSet.has(u.id))
+    .filter(u => friendSet.has(u.id))
     .map(u => {
       const set = socketsByUser.get(u.id);
       const online = !!(set && set.size > 0);  // presence

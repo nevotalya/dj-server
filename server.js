@@ -93,7 +93,13 @@ function broadcastAll(obj) {
   }
 }
 
-function usersListArray() {
+/**
+ * Build the "users" list from the perspective of a single viewer:
+ * - always includes the viewer themself
+ * - includes all of the viewer's friends
+ * (no global "everyone" list anymore)
+ */
+function usersListArrayFor(viewerId) {
   // following is tracked per-socket; compress to userId -> followedDjId|null
   const followingMap = new Map();
   for (const [ws, uid] of sockets.entries()) {
@@ -101,20 +107,35 @@ function usersListArray() {
     followingMap.set(uid, meta.following || null);
   }
 
-  return Array.from(users.values()).map(u => {
-    const set = socketsByUser.get(u.id);
-    const online = !!(set && set.size > 0);  // presence
-    return {
-      id: u.id,
-      displayName: u.displayName || "(unnamed)",
-      isDJ: currentDJs.has(u.id),
-      following: followingMap.get(u.id) ?? null,
-      online,
-    };
-  });
+  const viewer = users.get(viewerId);
+  const friendSet = viewer?.friends || new Set();
+
+  return Array.from(users.values())
+    .filter(u => u.id === viewerId || friendSet.has(u.id))
+    .map(u => {
+      const set = socketsByUser.get(u.id);
+      const online = !!(set && set.size > 0);  // presence
+      return {
+        id: u.id,
+        displayName: u.displayName || "(unnamed)",
+        isDJ: currentDJs.has(u.id),
+        following: followingMap.get(u.id) ?? null,
+        online,
+      };
+    });
 }
 
-function pushUsersList() { broadcastAll({ type: 'users', payload: usersListArray() }); }
+/**
+ * Send a tailored "users" list to each connected socket, filtered
+ * to that user's own friends (plus themself).
+ */
+function pushUsersList() {
+  for (const [ws, uid] of sockets.entries()) {
+    if (ws.readyState !== WebSocket.OPEN) continue;
+    const listForViewer = usersListArrayFor(uid);
+    safeSend(ws, { type: 'users', payload: listForViewer });
+  }
+}
 
 function pushFriendsList(userId) {
   const u = users.get(userId); if (!u) return;
@@ -458,6 +479,8 @@ wss.on('connection', (ws) => {
 
         pushFriendsList(uid);
         pushFriendsList(fid);
+        // friends list changed, so everyone’s filtered users list may change
+        pushUsersList();
         break;
       }
 
@@ -469,6 +492,7 @@ wss.on('connection', (ws) => {
       }
 
       case 'listUsers': {
+        // now sends a per-viewer filtered list
         pushUsersList();
         break;
       }
@@ -493,52 +517,33 @@ wss.on('connection', (ws) => {
     }
   });
 
-//  ws.on('close', () => {
-//    const uid = sockets.get(ws);
-//    sockets.delete(ws);
-//    if (uid) {
-//      const set = socketsByUser.get(uid);
-//      if (set) {
-//        set.delete(ws);
-//        if (set.size === 0) socketsByUser.delete(uid);
-//      }
-//      if (socketsByUser.get(uid) == null && currentDJs.has(uid)) {
-//        currentDJs.delete(uid);
-//        for (const [ws2] of sockets.entries()) {
-//          if (ws2.meta && ws2.meta.following === uid) ws2.meta.following = null;
-//        }
-//      }
-//      pushUsersList();
-//    }
-//  });
+  ws.on('close', () => {
+    const uid = sockets.get(ws);
+    sockets.delete(ws);
 
-    ws.on('close', () => {
-      const uid = sockets.get(ws);
-      sockets.delete(ws);
+    if (!uid) return;
 
-      if (!uid) return;
-
-      const set = socketsByUser.get(uid);
-      if (set) {
-        set.delete(ws);
-        if (set.size === 0) {
-          // no more active sockets for this user
-          socketsByUser.delete(uid);
-        }
+    const set = socketsByUser.get(uid);
+    if (set) {
+      set.delete(ws);
+      if (set.size === 0) {
+        // no more active sockets for this user
+        socketsByUser.delete(uid);
       }
+    }
 
-      // IMPORTANT:
-      // - Do NOT remove them from currentDJs here.
-      // - Do NOT clear followers’ meta.following here.
-      //
-      // Being a DJ / stopping being a DJ is controlled *only* by the explicit
-      // "setDJ" message, not by transient disconnections.
-      //
-      // Listeners will keep "following" the DJ ID in memory even if the DJ
-      // temporarily drops offline, and will automatically resume when DJ reconnects.
+    // IMPORTANT:
+    // - Do NOT remove them from currentDJs here.
+    // - Do NOT clear followers’ meta.following here.
+    //
+    // Being a DJ / stopping being a DJ is controlled *only* by the explicit
+    // "setDJ" message, not by transient disconnections.
+    //
+    // Listeners will keep "following" the DJ ID in memory even if the DJ
+    // temporarily drops offline, and will automatically resume when DJ reconnects.
 
-      pushUsersList();
-    });
+    pushUsersList();
+  });
     
   ws.on('error', (err) => { console.error('WS error:', err); });
 });
@@ -578,5 +583,3 @@ server.listen(PORT, HOST, () => {
   console.log(`   • Health:      https://dj-server-a95a.onrender.com/health`);
   console.log(`   • AASA:        https://dj-server-a95a.onrender.com/.well-known/apple-app-site-association`);
 });
-
-

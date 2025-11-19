@@ -100,7 +100,6 @@ function broadcastAll(obj) {
  * (no global "everyone" list anymore)
  */
 function usersListArrayFor(viewerId) {
-  // following is tracked per-socket; compress to userId -> followedDjId|null
   const followingMap = new Map();
   for (const [ws, uid] of sockets.entries()) {
     const meta = ws.meta || {};
@@ -111,10 +110,12 @@ function usersListArrayFor(viewerId) {
   const friendSet = viewer?.friends || new Set();
 
   return Array.from(users.values())
-    .filter(u => friendSet.has(u.id))
+    // ✅ Always include the viewer
+    // ✅ And the viewer's friends
+    .filter(u => u.id === viewerId || friendSet.has(u.id))
     .map(u => {
       const set = socketsByUser.get(u.id);
-      const online = !!(set && set.size > 0);  // presence
+      const online = !!(set && set.size > 0);
       return {
         id: u.id,
         displayName: u.displayName || "(unnamed)",
@@ -496,7 +497,7 @@ wss.on('connection', (ws) => {
         pushUsersList();
         break;
       }
-
+ 
       case 'playback': {
         const uid = sockets.get(ws);
         if (!uid) return;
